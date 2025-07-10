@@ -9,7 +9,7 @@ repository = "https://github.com/gbrigandi/mcp-server-wazuh"
 readme = "README.md"
 
 [dependencies]
-wazuh-client = "0.1.6" 
+wazuh-client = "0.1.7" 
 rmcp = { version = "0.1.5", features = ["server", "transport-io"] }
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }

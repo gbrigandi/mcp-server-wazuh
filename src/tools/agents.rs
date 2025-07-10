@@ -15,7 +15,7 @@ use wazuh_client::{AgentsClient, Port as WazuhPort, VulnerabilityClient};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct GetAgentsParams {
-    #[schemars(description = "Maximum number of agents to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of agents to retrieve (default: 300)")]
     pub limit: Option<u32>,
     #[schemars(
         description = "Agent status filter (active, disconnected, pending, never_connected)"
@@ -39,7 +39,7 @@ pub struct GetAgentProcessesParams {
         description = "Agent ID to get processes for (required, e.g., \"0\", \"1\", \"001\")"
     )]
     pub agent_id: String,
-    #[schemars(description = "Maximum number of processes to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of processes to retrieve (default: 300)")]
     pub limit: Option<u32>,
     #[schemars(description = "Search string to filter processes by name or command (optional)")]
     pub search: Option<String>,
@@ -51,7 +51,7 @@ pub struct GetAgentPortsParams {
         description = "Agent ID to get network ports for (required, e.g., \"001\", \"002\", \"003\")"
     )]
     pub agent_id: String,
-    #[schemars(description = "Maximum number of ports to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of ports to retrieve (default: 300)")]
     pub limit: Option<u32>,
     #[schemars(description = "Protocol to filter by (e.g., \"tcp\", \"udp\")")]
     pub protocol: String,
@@ -80,7 +80,7 @@ impl AgentTools {
         &self,
         params: GetAgentsParams,
     ) -> Result<CallToolResult, McpError> {
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
 
         tracing::info!(
             limit = %limit,
@@ -277,7 +277,7 @@ impl AgentTools {
                 return Self::error_result(err_msg);
             }
         };
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
         let offset = 0;
 
         tracing::info!(
@@ -401,7 +401,7 @@ impl AgentTools {
                 return Self::error_result(err_msg);
             }
         };
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
         let offset = 0; // Default offset
 
         tracing::info!(

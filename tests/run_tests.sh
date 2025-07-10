@@ -38,46 +38,13 @@ echo "=== Running Integration Tests with Mock Wazuh ==="
 cargo test --test rmcp_integration_test
 
 echo ""
-echo "=== Manual MCP Server Testing ==="
-
-# Test the server with a simple MCP interaction
-echo "Testing MCP server initialization..."
-
-# Create a temporary test script
-cat > /tmp/test_mcp_server.sh << 'INNER_EOF'
-#!/bin/bash
-
-# Start the server in background
-WAZUH_HOST=mock.example.com RUST_LOG=error cargo run --bin mcp-server-wazuh &
-SERVER_PID=$!
-
-# Give server time to start
-sleep 1
-
-# Test MCP initialization
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | timeout 5s nc -l 0 2>/dev/null || {
-    # If nc doesn't work, try a different approach
-    echo "Testing server startup..."
-    sleep 2
-}
-
-# Clean up
-kill $SERVER_PID 2>/dev/null || true
-wait $SERVER_PID 2>/dev/null || true
-
-echo "Manual test completed"
-INNER_EOF
-
-chmod +x /tmp/test_mcp_server.sh
-/tmp/test_mcp_server.sh
-rm /tmp/test_mcp_server.sh
-
-echo ""
 echo "=== Testing Server Binary ==="
 echo "Verifying server binary can start and show help..."
 
-# Test that the binary can start and show help
-timeout 5s cargo run --bin mcp-server-wazuh -- --help || echo "Help command test completed"
+# Test that the binary can start and show help. It should exit immediately.
+cargo run --bin mcp-server-wazuh -- --help > /dev/null
+
+echo "Help command test completed"
 
 echo ""
 echo "=== All Tests Complete ==="

@@ -15,7 +15,7 @@ use super::ToolModule;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct GetRulesSummaryParams {
-    #[schemars(description = "Maximum number of rules to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of rules to retrieve (default: 300)")]
     pub limit: Option<u32>,
     #[schemars(description = "Rule level to filter by (optional)")]
     pub level: Option<u32>,
@@ -43,7 +43,7 @@ impl RuleTools {
         &self,
         #[tool(aggr)] params: GetRulesSummaryParams,
     ) -> Result<CallToolResult, McpError> {
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
         
         tracing::info!(
             limit = %limit, 

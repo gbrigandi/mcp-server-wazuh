@@ -13,7 +13,7 @@ use wazuh_client::{ClusterClient, LogsClient};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct SearchManagerLogsParams {
-    #[schemars(description = "Maximum number of log entries to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of log entries to retrieve (default: 300)")]
     pub limit: Option<u32>,
     #[schemars(description = "Number of log entries to skip (default: 0)")]
     pub offset: Option<u32>,
@@ -27,7 +27,7 @@ pub struct SearchManagerLogsParams {
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct GetManagerErrorLogsParams {
-    #[schemars(description = "Maximum number of error log entries to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of error log entries to retrieve (default: 300)")]
     pub limit: Option<u32>,
 }
 
@@ -87,7 +87,7 @@ impl StatsTools {
         &self,
         params: SearchManagerLogsParams,
     ) -> Result<CallToolResult, McpError> {
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
         let offset = params.offset.unwrap_or(0);
 
         tracing::info!(
@@ -151,7 +151,7 @@ impl StatsTools {
         &self,
         params: GetManagerErrorLogsParams,
     ) -> Result<CallToolResult, McpError> {
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
 
         tracing::info!(limit = %limit, "Retrieving Wazuh manager error logs");
 

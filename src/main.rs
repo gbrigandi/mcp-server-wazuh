@@ -171,18 +171,20 @@ impl WazuhToolsServer {
             .ok()
             .or_else(|| Some("https".to_string()));
 
-        let wazuh_factory = WazuhClientFactory::new(
-            api_host,
-            api_port,
-            api_username,
-            api_password,
-            indexer_host,
-            indexer_port,
-            indexer_username,
-            indexer_password,
-            verify_ssl,
-            test_protocol,
-        );
+        let mut builder = WazuhClientFactory::builder()
+            .api_host(api_host)
+            .api_port(api_port)
+            .api_credentials(&api_username, &api_password)
+            .indexer_host(indexer_host)
+            .indexer_port(indexer_port)
+            .indexer_credentials(&indexer_username, &indexer_password)
+            .verify_ssl(verify_ssl);
+
+        if let Some(protocol) = test_protocol {
+            builder = builder.protocol(protocol);
+        }
+
+        let wazuh_factory = builder.build();
 
         let wazuh_indexer_client = wazuh_factory.create_indexer_client();
         let wazuh_rules_client = wazuh_factory.create_rules_client();

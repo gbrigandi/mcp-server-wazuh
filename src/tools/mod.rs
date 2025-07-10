@@ -26,9 +26,12 @@ pub trait ToolModule {
     }
 
     fn not_found_result(resource: &str) -> Result<CallToolResult, McpError> {
-        Ok(CallToolResult::success(vec![Content::text(format!(
-            "No {} found matching the specified criteria.", resource
-        ))]))
+        let message = if resource == "Wazuh alerts" {
+            "No Wazuh alerts found.".to_string()
+        } else {
+            format!("No {} found matching the specified criteria.", resource)
+        };
+        Ok(CallToolResult::success(vec![Content::text(message)]))
     }
 }
 

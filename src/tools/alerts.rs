@@ -15,7 +15,7 @@ use super::ToolModule;
 /// Parameters for getting alert summary
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct GetAlertSummaryParams {
-    #[schemars(description = "Maximum number of alerts to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of alerts to retrieve (default: 300)")]
     pub limit: Option<u32>,
 }
 
@@ -38,21 +38,19 @@ impl AlertTools {
         &self,
         #[tool(aggr)] params: GetAlertSummaryParams,
     ) -> Result<CallToolResult, McpError> {
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(300);
         
         tracing::info!(limit = %limit, "Retrieving Wazuh alert summary");
 
-        match self.indexer_client.get_alerts().await {
+        match self.indexer_client.get_alerts(Some(limit)).await {
             Ok(raw_alerts) => {
-                let alerts_to_process: Vec<_> = raw_alerts.into_iter().take(limit as usize).collect();
-
-                if alerts_to_process.is_empty() {
+                if raw_alerts.is_empty() {
                     tracing::info!("No Wazuh alerts found to process. Returning standard message.");
                     return Self::not_found_result("Wazuh alerts");
                 }
 
-                let num_alerts_to_process = alerts_to_process.len();
-                let mcp_content_items: Vec<Content> = alerts_to_process
+                let num_alerts_to_process = raw_alerts.len();
+                let mcp_content_items: Vec<Content> = raw_alerts
                     .into_iter()
                     .map(|alert_value| {
                         let source = alert_value.get("_source").unwrap_or(&alert_value);

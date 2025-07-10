@@ -15,7 +15,7 @@ use super::ToolModule;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct GetVulnerabilitiesSummaryParams {
-    #[schemars(description = "Maximum number of vulnerabilities to retrieve (default: 100)")]
+    #[schemars(description = "Maximum number of vulnerabilities to retrieve (default: 10000)")]
     pub limit: Option<u32>,
     #[schemars(description = "Agent ID to filter vulnerabilities by (required, e.g., \"0\", \"1\", \"001\")")]
     pub agent_id: String,
@@ -29,6 +29,8 @@ pub struct GetVulnerabilitiesSummaryParams {
 pub struct GetCriticalVulnerabilitiesParams {
     #[schemars(description = "Agent ID to get critical vulnerabilities for (required, e.g., \"0\", \"1\", \"001\")")]
     pub agent_id: String,
+    #[schemars(description = "Maximum number of vulnerabilities to retrieve (default: 300)")]
+    pub limit: Option<u32>,
 }
 
 #[derive(Clone)]
@@ -67,7 +69,7 @@ impl VulnerabilityTools {
         &self,
         params: GetVulnerabilitiesSummaryParams,
     ) -> Result<CallToolResult, McpError> {
-        let limit = params.limit.unwrap_or(100);
+        let limit = params.limit.unwrap_or(10000);
         let offset = 0; // Default offset, can be extended in future if needed
 
         let agent_id = match Self::format_agent_id(&params.agent_id) {
@@ -91,42 +93,17 @@ impl VulnerabilityTools {
 
         let mut vulnerability_client = self.vulnerability_client.lock().await;
 
-        let vulnerabilities = if let Some(cve_filter) = &params.cve {
-            match vulnerability_client
-                .get_agent_vulnerabilities(
-                    &agent_id,
-                    Some(1000), // Get more results to filter
-                    Some(offset),
-                    params
-                        .severity
-                        .as_deref()
-                        .and_then(VulnerabilitySeverity::from_str),
-                )
-                .await
-            {
-                Ok(all_vulns) => {
-                    let filtered: Vec<_> = all_vulns
-                        .into_iter()
-                        .filter(|v| v.cve.to_lowercase().contains(&cve_filter.to_lowercase()))
-                        .take(limit as usize)
-                        .collect();
-                    Ok(filtered)
-                }
-                Err(e) => Err(e),
-            }
-        } else {
-            vulnerability_client
-                .get_agent_vulnerabilities(
-                    &agent_id,
-                    Some(limit),
-                    Some(offset),
-                    params
-                        .severity
-                        .as_deref()
-                        .and_then(VulnerabilitySeverity::from_str),
-                )
-                .await
-        };
+        let vulnerabilities = vulnerability_client
+            .get_agent_vulnerabilities(
+                &agent_id,
+                Some(limit),
+                Some(offset),
+                params
+                    .severity
+                    .as_deref()
+                    .and_then(VulnerabilitySeverity::from_str),
+            )
+            .await;
 
         match vulnerabilities {
             Ok(vulnerabilities) => {
@@ -268,6 +245,7 @@ impl VulnerabilityTools {
         &self,
         params: GetCriticalVulnerabilitiesParams,
     ) -> Result<CallToolResult, McpError> {
+        let limit = params.limit.unwrap_or(300);
         let agent_id = match Self::format_agent_id(&params.agent_id) {
             Ok(formatted_id) => formatted_id,
             Err(err_msg) => {
@@ -287,7 +265,7 @@ impl VulnerabilityTools {
         let mut vulnerability_client = self.vulnerability_client.lock().await;
 
         match vulnerability_client
-            .get_critical_vulnerabilities(&agent_id)
+            .get_critical_vulnerabilities(&agent_id, Some(limit))
             .await
         {
             Ok(vulnerabilities) => {
@@ -409,4 +387,3 @@ impl VulnerabilityTools {
 }
 
 impl ToolModule for VulnerabilityTools {}
-
