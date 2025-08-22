@@ -1,4 +1,5 @@
 # Wazuh MCP Server - Talk to your SIEM
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/gbrigandi/mcp-server-wazuh)](https://archestra.ai/mcp-catalog/gbrigandi__mcp-server-wazuh)
 
 A Rust-based server designed to bridge the gap between a Wazuh Security Information and Event Management (SIEM) system and applications requiring contextual security data, specifically tailored for the Claude Desktop Integration using the Model Context Protocol (MCP).
 
