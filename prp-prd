@@ -1,0 +1,110 @@
+Absolument. C'est le plan directeur.
+
+C'est la différence entre un "projet" et un "produit". Le **PRP (Project Proposal)** est ta vision stratégique, le "Pourquoi" qui justifie l'effort. Le **PRD (Product Requirements Document)** est le "Comment" tactique, la liste de courses pour le développeur (même si c'Sest toi).
+
+Voici les documents pour ton projet `sentinelle.pro`.
+
+---
+
+### 1. PRP (Project Proposal) : La Vision "Sentinelle"
+
+**Titre du Projet :** Plateforme `Sentinelle-MCP`
+**Auteur :** [Ton Nom], Guru DevSecOps (`sentinelle.pro`)
+**Date :** 16 Novembre 2025
+**Destinataires :** (Toi, futurs investisseurs, partenaires stratégiques)
+
+**1. Le Problème (L'Angle Mort)**
+
+Les TPE/PME (Avocats, Comptables, Artisans) sont la cible n°1 des cyberattaques. Leurs "défenses" se résument à :
+* **Des "Passoires" :** Des antivirus grand public aveugles aux menaces comportementales.
+* **L'Absence de Preuve :** Ils n'ont *aucun moyen* de prouver leur conformité (RGPD) ou de savoir s'ils sont *réellement* protégés.
+* **La Complexité :** Les solutions de sécurité pro (SIEM/XDR) sont des usines à gaz illisibles et impayables.
+
+**2. La Solution (La Sentinelle)**
+
+Nous ne vendons pas un logiciel. Nous vendons une **Tranquillité d'Esprit Attestée**.
+
+Nous allons construire `Sentinelle-MCP`, une plateforme de service "MDR" (Managed Detection & Response) verticalement intégrée, conçue pour les non-techniciens et pilotée par une IA.
+
+Elle se compose de 4 piliers :
+1.  **Le Moteur (Wazuh HA) :** Un cluster Wazuh indestructible qui ingère et analyse les logs.
+2.  **Le Cerveau (MCP-IA) :** Notre fork "propriétaire" du serveur MCP, dopé à l'IA (LLM). C'est notre *sauce secrète* : il traduit le chaos en clarté.
+3.  **Le Visage (Portail Sentinelle) :** Une interface client "Iron Man" qui prouve la valeur et rassure, sans jamais montrer un log technique.
+4.  **L'Aimant (Blog `sentinelle.pro`) :** Notre moteur de génération de leads et d'autorité.
+
+**3. Proposition de Valeur (Le "Pourquoi Nous")**
+
+* **Pour le Client :** "Nous ne vous vendons pas une alarme. Nous vous vendons un garde du corps qui vous envoie un rapport simple tous les matins." C'est la **première offre de sécurité "Zéro Jargon" attestée**.
+* **Pour Nous (Le Guru) :** "Nous ne vendons plus nos heures. Nous vendons l'efficacité de notre IA." C'est la **scalabilité infinie**. Le Cerveau MCP-IA nous permet de gérer 100 clients avec l'efficacité de 10.
+
+**4. Stratégie de Mise sur le Marché (GTM)**
+
+1.  **Phase 1 (MVP) :** Construire le Moteur (Wazuh HA) et le Cerveau (MCP-IA). Gérer les 5 premiers clients "à la main" (via l'API Admin).
+2.  **Phase 2 (Produit) :** Construire le Visage (Portail Client V1). Lancer l'offre "Pack Conformité" via le Blog.
+3.  **Phase 3 (Autorité) :** Lancer le Blog payant "War Room" pour créer une communauté et asseoir l'autorité de "Guru".
+
+**5. Métriques de Succès**
+* **Produit :** Temps de remédiation (TTR) divisé par 10 (grâce à l'IA Admin).
+* **Business :** Taux de conversion "Audit Flash -> Pack Conformité" > 50%.
+* **Client :** Zéro "churn" (perte de client) pour cause d'inefficacité.
+
+---
+
+### 2. PRD (Product Requirements Document) : Le Blueprint `Sentinelle-MCP`
+
+**Version :** 1.0
+**Auteur :** [Ton Nom]
+**Objectif :** Construire la plateforme MVP de `sentinelle.pro`.
+
+#### P1 : Infrastructure Cœur (Le "Moteur")
+
+* **User Story (Admin) :** "En tant que Guru, je veux que mon service continue de fonctionner et d'ingérer des logs même si un de mes VPS tombe en panne."
+* **Exigences :**
+    * **[REQ-P1-01] :** Déployer un cluster Wazuh Manager en HA (2+ nœuds Master/Worker) sur OVH.
+    * **[REQ-P1-02] :** Déployer un cluster Wazuh Indexer (OpenSearch) en HA (3 nœuds min) sur OVH.
+    * **[REQ-P1-03] :** Toute la communication inter-nœuds (Managers, Indexers) DOIT utiliser le vRack privé OVH.
+    * **[REQ-P1-04] :** Un Load Balancer OVH DOIT gérer l'ingestion des agents (1514/1515) et l'accès API (55000).
+
+#### P2 : Backend API (Le "Cerveau MCP-IA")
+
+* **User Story (Système) :** "En tant que Cerveau, j'ai besoin de simplifier les appels Wazuh bruts en commandes logiques et d'y injecter de l'IA pour les "traduire"."
+* **Exigences :**
+    * **[REQ-P2-01] :** Forker le dépôt `gbrigandi/mcp-server-wazuh` dans un repo privé `sentinelle-pro/mcp-ia-backend`.
+    * **[REQ-P2-02] :** Le Cerveau DOIT être déployé sur un VPS/Conteneur dédié, connecté au vRack (pour parler au P1) et à Internet (pour parler au P3).
+    * **[REQ-P2-03] :** Le Cerveau DOIT être le *seul* point d'entrée vers l'API Wazuh. L'API Wazuh (55000) ne DOIT PAS être exposée sur Internet.
+    * **[REQ-P2-04] :** Créer un endpoint **Admin "J.A.R.V.I.S."** (`POST /admin/chat`) :
+        * Accepte une commande en langage naturel (ex: "Bannis l'IP 1.2.3.4").
+        * Se connecte à un LLM (API Gemini/Mistral) avec un prompt "Guru" pour traduire la commande en appels API MCP/Wazuh.
+        * DOIT avoir un accès "read-write-execute" (lancer des AR).
+    * **[REQ-P2-05] :** Créer un endpoint **Client "Concierge"** (`POST /client/chat`) :
+        * Accepte une question en langage naturel (ex: "Suis-je en sécurité ?").
+        * Se connecte au LLM avec un prompt "Rassurant/Pédagogue".
+        * DOIT avoir un accès "read-only". Ne DOIT JAMAIS retourner d'IP, de logs bruts ou d'ID de règle.
+    * **[REQ-P2-06] :** Créer un endpoint **Portail Client** (`GET /portal/summary/{group_id}`) :
+        * DOIT agréger : statut des agents, score SCA/Vuln, et les 5 dernières alertes.
+        * DOIT utiliser l'IA (via P2-05) pour "traduire" les 5 alertes en français simple.
+
+#### P3 : Front-End (Le "Portail Sentinelle")
+
+* **User Story (Client) :** "En tant que client (Avocat), je veux me connecter et voir en 3 secondes si je suis protégé, sans être noyé sous le jargon."
+* **Exigences :**
+    * **[REQ-P3-01] :** Application Front-End (Next.js ou Svelte) avec le design "Dark Mode / Cyan Électrique".
+    * **[REQ-P3-02] :** Système d'authentification simple (par ex. login/pass par client, géré par l'Admin).
+    * **[REQ-P3-03] :** **Dashboard Client :**
+        * DOIT appeler l'endpoint `[REQ-P2-06]` pour afficher les données.
+        * DOIT afficher le "Bouclier" (visuel), les métriques (agents, menaces bloquées) et le "Journal de Bord" (alertes traduites).
+    * **[REQ-P3-04] :** **Interface Chatbot Client :**
+        * DOIT appeler l'endpoint `[REQ-P2-05]`.
+    * **[REQ-P3-05] :** **Section Admin (cachée) :**
+        * Une route sécurisée (ex: `/admin`) pour le Guru.
+        * DOIT contenir l'interface de chat "J.A.R.V.I.S." (appelant `[REQ-P2-04]`).
+
+#### P4 : Marketing & Acquisition (L'"Aimant")
+
+* **User Story (Prospect) :** "En tant que gérant de PME inquiet, je cherche sur Google 'mon antivirus est-il suffisant' et je veux tomber sur un expert qui me parle simplement."
+* **Exigences :**
+    * **[REQ-P4-01] :** Déployer un blog Ghost sur le domaine racine `sentinelle.pro` ou sous-domaine `blog.sentinelle.pro`.
+    * **[REQ-P4-02] :** Le thème Ghost DOIT être personnalisé pour matcher l'identité visuelle (P3).
+    * **[REQ-P4-03] :** Implémenter la Page de Vente (telle que définie) comme page d'accueil ou `/services`.
+    * **[REQ-P4-04] :** Mettre en place la fonctionnalité "Ghost Members" pour le contenu payant [🔒] ("Accès War Room").
+    * **[REQ-P4-05] :** Tous les articles de blog et pages DOIVENT avoir un CTA proéminent vers l'"Audit Flash 15 min" (lien Calendly/Cal.com).
