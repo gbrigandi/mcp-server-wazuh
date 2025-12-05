@@ -101,7 +101,7 @@ impl VulnerabilityTools {
                 params
                     .severity
                     .as_deref()
-                    .and_then(VulnerabilitySeverity::from_str),
+                    .and_then(VulnerabilitySeverity::parse),
             )
             .await;
 

@@ -79,10 +79,48 @@ impl AlertTools {
                             .and_then(|l| l.as_u64())
                             .unwrap_or(0);
 
-                        let formatted_text = format!(
+                        // Extract source IP from data.srcip (common for SSH, network alerts)
+                        let src_ip = source.get("data")
+                            .and_then(|d| d.get("srcip"))
+                            .and_then(|ip| ip.as_str())
+                            .or_else(|| source.get("data")
+                                .and_then(|d| d.get("src_ip"))
+                                .and_then(|ip| ip.as_str()))
+                            .unwrap_or("");
+
+                        // Extract destination IP if available
+                        let dst_ip = source.get("data")
+                            .and_then(|d| d.get("dstip"))
+                            .and_then(|ip| ip.as_str())
+                            .or_else(|| source.get("data")
+                                .and_then(|d| d.get("dst_ip"))
+                                .and_then(|ip| ip.as_str()))
+                            .unwrap_or("");
+
+                        // Extract source user if available
+                        let src_user = source.get("data")
+                            .and_then(|d| d.get("srcuser"))
+                            .and_then(|u| u.as_str())
+                            .or_else(|| source.get("data")
+                                .and_then(|d| d.get("dstuser"))
+                                .and_then(|u| u.as_str()))
+                            .unwrap_or("");
+
+                        // Build formatted text with optional fields
+                        let mut formatted_text = format!(
                             "Alert ID: {}\nTime: {}\nAgent: {}\nLevel: {}\nDescription: {}",
                             id, timestamp, agent_name, rule_level, description
                         );
+
+                        if !src_ip.is_empty() {
+                            formatted_text.push_str(&format!("\nSource IP: {}", src_ip));
+                        }
+                        if !dst_ip.is_empty() {
+                            formatted_text.push_str(&format!("\nDestination IP: {}", dst_ip));
+                        }
+                        if !src_user.is_empty() {
+                            formatted_text.push_str(&format!("\nUser: {}", src_user));
+                        }
                         Content::text(formatted_text)
                     })
                     .collect();

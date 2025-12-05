@@ -54,7 +54,7 @@ impl McpStdioClient {
     fn read_response(&mut self) -> Result<Value, Box<dyn std::error::Error>> {
         let mut line = String::new();
         self.stdout.read_line(&mut line)?;
-        let response: Value = serde_json::from_str(&line.trim())?;
+        let response: Value = serde_json::from_str(line.trim())?;
         Ok(response)
     }
 

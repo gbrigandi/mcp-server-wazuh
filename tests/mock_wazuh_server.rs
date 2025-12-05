@@ -260,7 +260,7 @@ mod tests {
         let client = reqwest::Client::new();
         
         let response = client
-            .post(&format!("{}/security/user/authenticate", mock_server.url()))
+            .post(format!("{}/security/user/authenticate", mock_server.url()))
             .json(&json!({"username": "admin", "password": "admin"}))
             .send()
             .await
@@ -277,7 +277,7 @@ mod tests {
         let client = reqwest::Client::new();
         
         let response = client
-            .post(&format!("{}/wazuh-alerts*/_search", mock_server.url()))
+            .post(format!("{}/wazuh-alerts*/_search", mock_server.url()))
             .json(&json!({"query": {"match_all": {}}}))
             .send()
             .await
@@ -294,9 +294,9 @@ mod tests {
     async fn test_empty_alerts_server() {
         let mock_server = MockWazuhServer::with_empty_alerts();
         let client = reqwest::Client::new();
-        
+
         let response = client
-            .post(&format!("{}/wazuh-alerts*/_search", mock_server.url()))
+            .post(format!("{}/wazuh-alerts*/_search", mock_server.url()))
             .json(&json!({"query": {"match_all": {}}}))
             .send()
             .await
@@ -312,9 +312,9 @@ mod tests {
     async fn test_auth_error_server() {
         let mock_server = MockWazuhServer::with_auth_error();
         let client = reqwest::Client::new();
-        
+
         let response = client
-            .post(&format!("{}/security/user/authenticate", mock_server.url()))
+            .post(format!("{}/security/user/authenticate", mock_server.url()))
             .json(&json!({"username": "admin", "password": "wrong"}))
             .send()
             .await
@@ -327,9 +327,9 @@ mod tests {
     async fn test_alerts_error_server() {
         let mock_server = MockWazuhServer::with_alerts_error();
         let client = reqwest::Client::new();
-        
+
         let response = client
-            .post(&format!("{}/wazuh-alerts*/_search", mock_server.url()))
+            .post(format!("{}/wazuh-alerts*/_search", mock_server.url()))
             .json(&json!({"query": {"match_all": {}}}))
             .send()
             .await

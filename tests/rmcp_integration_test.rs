@@ -1,7 +1,10 @@
 //! Integration tests for the rmcp-based Wazuh MCP Server
-//! 
+//!
 //! These tests verify the MCP server functionality using a mock Wazuh API server.
 //! Tests cover tool registration, parameter validation, alert retrieval, and error handling.
+
+// Allow holding mutex guard across await in tests - this is intentional for test serialization
+#![allow(clippy::await_holding_lock)]
 
 use std::process::{Child, Command, Stdio};
 use std::io::{BufRead, BufReader, Write};
