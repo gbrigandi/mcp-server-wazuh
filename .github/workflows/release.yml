@@ -45,6 +45,9 @@ jobs:
     name: Build Binaries for ${{ matrix.target }}
     needs: validate_version
     runs-on: ${{ matrix.os }}
+    env:
+      APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+      APPLE_NOTARIZATION_ENABLED: ${{ secrets.APPLE_API_KEY_BASE64 != '' }}
     strategy:
       matrix:
         include:
@@ -101,7 +104,7 @@ jobs:
           fi
 
       - name: Import Apple Certificate (macOS only)
-        if: ${{ (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && env.APPLE_SIGNING_ENABLED == 'true'
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -136,7 +139,7 @@ jobs:
           rm certificate.p12 DeveloperIDG2CA.cer AppleWWDRCAG3.cer
 
       - name: Code Sign Binary (macOS only)
-        if: ${{ (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && env.APPLE_SIGNING_ENABLED == 'true'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
@@ -155,7 +158,7 @@ jobs:
           /usr/bin/codesign --verify --verbose ./target/${{ matrix.target }}/release/${{ matrix.output_name }}
 
       - name: Notarize Binary (macOS only)
-        if: ${{ (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && secrets.APPLE_API_KEY_BASE64 != '' }}
+        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && env.APPLE_NOTARIZATION_ENABLED == 'true'
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
