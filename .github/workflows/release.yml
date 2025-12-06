@@ -45,9 +45,6 @@ jobs:
     name: Build Binaries for ${{ matrix.target }}
     needs: validate_version
     runs-on: ${{ matrix.os }}
-    env:
-      APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
-      APPLE_NOTARIZATION_ENABLED: ${{ secrets.APPLE_API_KEY_BASE64 != '' }}
     strategy:
       matrix:
         include:
@@ -104,11 +101,25 @@ jobs:
           fi
 
       - name: Import Apple Certificate (macOS only)
-        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && env.APPLE_SIGNING_ENABLED == 'true'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
+          # Debug: Check if secrets are set (without revealing them)
+          echo "=== Checking secrets ==="
+          if [ -z "$APPLE_CERTIFICATE_BASE64" ]; then
+            echo "ERROR: APPLE_CERTIFICATE_BASE64 is empty!"
+            exit 1
+          else
+            echo "APPLE_CERTIFICATE_BASE64: Set (length: ${#APPLE_CERTIFICATE_BASE64})"
+          fi
+          if [ -z "$APPLE_CERTIFICATE_PASSWORD" ]; then
+            echo "WARNING: APPLE_CERTIFICATE_PASSWORD is empty"
+          else
+            echo "APPLE_CERTIFICATE_PASSWORD: Set (length: ${#APPLE_CERTIFICATE_PASSWORD})"
+          fi
+
           # Create temporary keychain with proper extension
           security create-keychain -p temp-password build.keychain
           security default-keychain -s build.keychain
@@ -121,8 +132,23 @@ jobs:
           # Import certificate with -A flag to avoid access control issues
           echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
 
+          # Debug: Check p12 file
+          echo "=== Checking .p12 file ==="
+          ls -la certificate.p12
+          file certificate.p12
+
           # Import certificate (should contain both cert and private key)
+          echo "=== Importing certificate ==="
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
+          IMPORT_RESULT=$?
+          echo "Import exit code: $IMPORT_RESULT"
+
+          # Debug: List all items in keychain
+          echo "=== All certificates in build.keychain ==="
+          security find-certificate -a build.keychain || true
+
+          echo "=== All identities (including non-codesigning) ==="
+          security find-identity -v build.keychain || true
 
           # Import Apple intermediate certificate (DER format)
           curl -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
@@ -139,7 +165,7 @@ jobs:
           rm certificate.p12 DeveloperIDG2CA.cer AppleWWDRCAG3.cer
 
       - name: Code Sign Binary (macOS only)
-        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && env.APPLE_SIGNING_ENABLED == 'true'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
@@ -158,7 +184,7 @@ jobs:
           /usr/bin/codesign --verify --verbose ./target/${{ matrix.target }}/release/${{ matrix.output_name }}
 
       - name: Notarize Binary (macOS only)
-        if: (matrix.os == 'macos-latest' || matrix.os == 'macos-14') && env.APPLE_NOTARIZATION_ENABLED == 'true'
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
