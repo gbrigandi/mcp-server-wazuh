@@ -1,6 +1,6 @@
 [package]
 name = "mcp-server-wazuh"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 description = "Wazuh SIEM MCP Server"
 authors = ["Gianluca Brigandi <gbrigand@gmail.com>"]
