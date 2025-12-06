@@ -10,46 +10,68 @@ permissions:
   packages: write # Needed to push to GitHub Container Registry
 
 jobs:
-  create_release:
-    name: Create Release
+  validate_version:
+    name: Validate Version
     runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+      - uses: actions/checkout@v4
+
+      - name: Validate tag format
+        run: |
+          if [[ ! "${GITHUB_REF}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid tag format. Must be v#.#.#"
+            exit 1
+          fi
+          echo "✅ Tag format is valid"
+
+      - name: Check version in Cargo.toml
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Tag version: $TAG_VERSION"
+
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d '"' -f 2)
+          echo "Cargo.toml version: $CARGO_VERSION"
+
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "❌ Version mismatch"
+            echo "   Tag version: $TAG_VERSION"
+            echo "   Cargo.toml version: $CARGO_VERSION"
+            exit 1
+          fi
+
+          echo "✅ Version matches: $TAG_VERSION"
 
   build_binaries:
     name: Build Binaries for ${{ matrix.target }}
-    needs: create_release
+    needs: validate_version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
+          # Linux Intel (musl for static linking)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             asset_name_suffix: linux-amd64
             output_name: mcp-server-wazuh
+
+          # Windows Intel
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name_suffix: windows-amd64.exe
             output_name: mcp-server-wazuh.exe
-          - os: macos-latest # Intel runner
+
+          # macOS Intel
+          - os: macos-latest
             target: x86_64-apple-darwin
             asset_name_suffix: macos-amd64
             output_name: mcp-server-wazuh
-          - os: macos-14 # ARM64/M1 runner
+
+          # macOS Apple Silicon
+          - os: macos-14
             target: aarch64-apple-darwin
             asset_name_suffix: macos-arm64
             output_name: mcp-server-wazuh
+
     steps:
       - uses: actions/checkout@v4
 
@@ -67,19 +89,127 @@ jobs:
       - name: Build binary
         run: cargo build --verbose --release --target ${{ matrix.target }}
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Check dynamic dependencies (macOS only)
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
+        run: |
+          echo "=== Checking dynamic library dependencies ==="
+          otool -L ./target/${{ matrix.target }}/release/${{ matrix.output_name }} || true
+          echo ""
+          echo "=== Checking for problematic dependencies ==="
+          if otool -L ./target/${{ matrix.target }}/release/${{ matrix.output_name }} | grep -E "(liblzma|/opt/homebrew|/usr/local)"; then
+            echo "WARNING: Found dynamic dependencies that may cause issues with code signing"
+          fi
+
+      - name: Import Apple Certificate (macOS only)
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create temporary keychain with proper extension
+          security create-keychain -p temp-password build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p temp-password build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+
+          # Add build keychain to search list
+          security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed s/\"//g)
+
+          # Import certificate with -A flag to avoid access control issues
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+
+          # Import certificate (should contain both cert and private key)
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
+
+          # Import Apple intermediate certificate (DER format)
+          curl -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import DeveloperIDG2CA.cer -k build.keychain -A -T /usr/bin/codesign
+
+          # Import Apple Worldwide Developer Relations CA G3 (DER format)
+          curl -o AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          security import AppleWWDRCAG3.cer -k build.keychain -A -T /usr/bin/codesign
+
+          # Set partition list to avoid password prompts
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k temp-password build.keychain
+
+          # Clean up certificate files
+          rm certificate.p12 DeveloperIDG2CA.cer AppleWWDRCAG3.cer
+
+      - name: Code Sign Binary (macOS only)
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          # Check identities in build keychain
+          echo "=== Code signing identities in build.keychain ==="
+          security find-identity -v -p codesigning build.keychain || true
+
+          # Extract signing identity hash from build keychain
+          SIGNING_HASH=$(security find-identity -v -p codesigning build.keychain | grep "$APPLE_SIGNING_IDENTITY" | grep -oE "[0-9A-F]{40}" | head -n 1)
+          echo "Using signing hash: $SIGNING_HASH"
+
+          # Sign the binary using the SHA-1 hash
+          /usr/bin/codesign --force --sign "$SIGNING_HASH" --timestamp --options runtime ./target/${{ matrix.target }}/release/${{ matrix.output_name }} -v
+
+          # Verify signature
+          /usr/bin/codesign --verify --verbose ./target/${{ matrix.target }}/release/${{ matrix.output_name }}
+
+      - name: Notarize Binary (macOS only)
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          # Create API key file
+          echo "=== Creating API key file ==="
+          API_KEY_FILE="AuthKey_${APPLE_API_KEY_ID}.p8"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$API_KEY_FILE"
+          echo "Created: $API_KEY_FILE"
+
+          # Create zip file for notarization using ditto (preserves metadata better)
+          echo "=== Creating zip file for notarization ==="
+          ZIP_FILE="mcp-server-wazuh-${{ matrix.asset_name_suffix }}-notarization.zip"
+          ditto -c -k --sequesterRsrc --keepParent ./target/${{ matrix.target }}/release/${{ matrix.output_name }} "$ZIP_FILE"
+          echo "Created: $ZIP_FILE"
+
+          # Submit for notarization
+          echo "=== Submitting for notarization ==="
+          echo "This may take several minutes..."
+          xcrun notarytool submit "$ZIP_FILE" \
+            --key "$API_KEY_FILE" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait
+
+          # Attempt to staple the notarization (will fail for command-line tools - this is expected)
+          echo "=== Attempting to staple notarization ==="
+          echo "Note: Stapling fails for command-line tools - this is normal"
+          xcrun stapler staple ./target/${{ matrix.target }}/release/${{ matrix.output_name }} || echo "Stapling failed (expected for command-line tools)"
+
+          # Final verification
+          echo "=== Final signature and notarization verification ==="
+          codesign --verify --verbose ./target/${{ matrix.target }}/release/${{ matrix.output_name }}
+          spctl --assess --type execute --verbose ./target/${{ matrix.target }}/release/${{ matrix.output_name }} || echo "spctl assessment completed"
+
+          # Clean up files
+          rm -f "$ZIP_FILE" "$API_KEY_FILE"
+
+          echo "=== Notarization completed successfully ==="
+
+      - name: Rename binary for upload
+        shell: bash
+        run: |
+          cp ./target/${{ matrix.target }}/release/${{ matrix.output_name }} mcp-server-wazuh-${{ matrix.asset_name_suffix }}
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/${{ matrix.output_name }}
-          asset_name: mcp-server-wazuh-${{ matrix.asset_name_suffix }}
-          asset_content_type: application/octet-stream
+          files: mcp-server-wazuh-${{ matrix.asset_name_suffix }}
 
   build_docker:
     name: Build and Push Docker Image
-    needs: create_release
+    needs: validate_version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -114,4 +244,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
