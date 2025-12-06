@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinelle-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - API_PREFIX=/api/v1
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=http://localhost:3000
+      - WAZUH_API_HOST=${WAZUH_API_HOST}
+      - WAZUH_API_PORT=${WAZUH_API_PORT:-55000}
+      - WAZUH_API_USERNAME=${WAZUH_API_USERNAME}
+      - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD}
+      - WAZUH_INDEXER_HOST=${WAZUH_INDEXER_HOST}
+      - WAZUH_INDEXER_PORT=${WAZUH_INDEXER_PORT:-9200}
+      - WAZUH_INDEXER_USERNAME=${WAZUH_INDEXER_USERNAME}
+      - WAZUH_INDEXER_PASSWORD=${WAZUH_INDEXER_PASSWORD}
+      - WAZUH_VERIFY_SSL=${WAZUH_VERIFY_SSL:-false}
+      - WAZUH_TEST_PROTOCOL=${WAZUH_TEST_PROTOCOL:-https}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@sentinelle.pro}
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./target/release/mcp-server-wazuh:/app/mcp-server-wazuh:ro
+    networks:
+      - sentinelle-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinelle-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_PREFIX=/api/v1
+    depends_on:
+      - backend
+    networks:
+      - sentinelle-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  sentinelle-network:
+    driver: bridge
+
+volumes:
+  backend-logs:

@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-dark: #0a0e1a;
+  --surface-dark: #111827;
+  --cyan-primary: #22d3ee;
+  --cyan-glow: rgba(34, 211, 238, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--bg-dark);
+  color: #f9fafb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+body {
+  background-image: linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cyan-primary);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 20px var(--cyan-glow);
+}
+
+.glow-cyan-lg {
+  box-shadow: 0 0 40px rgba(34, 211, 238, 0.5);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 20px var(--cyan-glow);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 40px rgba(34, 211, 238, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Glass morphism effect */
+.glass {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(34, 211, 238, 0.1);
+}
+
+/* Button base styles */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+}
+
+.btn-primary {
+  @apply bg-cyan-400 text-dark-bg hover:bg-cyan-500 hover:shadow-cyan-glow;
+}
+
+.btn-secondary {
+  @apply bg-dark-surfaceLight text-gray-200 hover:bg-dark-border border border-dark-border;
+}
+
+.btn-danger {
+  @apply bg-status-critical text-white hover:bg-red-600;
+}
