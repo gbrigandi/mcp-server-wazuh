@@ -23,6 +23,10 @@ This approach is particularly valuable for compliance teams who need to quickly 
 
 ![](media/wazuh-alerts-1.png)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/gbrigandi-mcp-server-wazuh).
+
 ## Example Use Cases
 
 The Wazuh MCP Server provides direct access to Wazuh security data through natural language interactions, enabling several practical use cases:
