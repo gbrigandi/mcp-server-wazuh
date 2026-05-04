@@ -118,6 +118,25 @@ For enhanced threat intelligence and incident response capabilities, the Wazuh M
     docker pull ghcr.io/gbrigandi/mcp-server-wazuh:latest
     ```
 
+2.  **Run with the streamable-HTTP transport (so other hosts on your
+    network can connect):**
+    ```bash
+    docker run -d --name mcp-server-wazuh \
+      -p 8000:8000 \
+      --env-file /path/to/your/.env \
+      ghcr.io/gbrigandi/mcp-server-wazuh:latest \
+      --transport http --host 0.0.0.0 --port 8000
+    ```
+    `--host 0.0.0.0` is required so the listener binds inside the
+    container and is reachable through the published port; the binary
+    defaults to `127.0.0.1`, which only binds inside the container's
+    network namespace and is not reachable from outside.
+
+    For the stdio transport (typical Claude Desktop / MCP client setup
+    where the client launches the container itself), see the JSON
+    config block further down — the client passes `-i` and consumes
+    stdio directly, no `--transport` flag needed.
+
 ### Option 3: Build from Source
 
 1.  **Prerequisites:**
