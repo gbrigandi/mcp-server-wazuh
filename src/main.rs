@@ -72,6 +72,7 @@ use tools::stats::{
 use tools::vulnerabilities::{
     GetCriticalVulnerabilitiesParams, GetVulnerabilitiesSummaryParams, VulnerabilityTools,
 };
+use tools::indexer::{IndexerTools, GetIndexerQueryParams};
 
 #[derive(Parser, Debug)]
 #[command(name = "mcp-server-wazuh")]
@@ -97,6 +98,7 @@ struct WazuhToolsServer {
     rule_tools: RuleTools,
     stats_tools: StatsTools,
     vulnerability_tools: VulnerabilityTools,
+    indexer_tools: IndexerTools,
     tool_router: ToolRouter<Self>,
 }
 
@@ -168,6 +170,7 @@ impl WazuhToolsServer {
         let rule_tools = RuleTools::new(rules_client_arc.clone());
         let stats_tools = StatsTools::new(logs_client_arc.clone(), cluster_client_arc.clone());
         let vulnerability_tools = VulnerabilityTools::new(vulnerability_client_arc.clone());
+        let indexer_tools = IndexerTools::new(indexer_client_arc.clone());
 
         Ok(Self {
             agent_tools,
@@ -175,6 +178,7 @@ impl WazuhToolsServer {
             rule_tools,
             stats_tools,
             vulnerability_tools,
+            indexer_tools,
             tool_router: Self::tool_router(),
         })
     }
@@ -338,6 +342,17 @@ impl WazuhToolsServer {
         Parameters(params): Parameters<GetWeeklyStatsParams>,
     ) -> Result<CallToolResult, McpError> {
         self.stats_tools.get_wazuh_weekly_stats(params).await
+    }
+
+    #[tool(
+        name = "get_wazuh_indexer_query",
+        description = "Execute a raw Elasticsearch query against the Wazuh Indexer. Accepts ES query DSL JSON for flexible search across wazuh-alerts-* and other indices. Supports aggregations for reporting (e.g. group by agent, MITRE tactic, rule level). Returns hits, total count, and aggregation buckets as JSON."
+    )]
+    async fn get_wazuh_indexer_query(
+        &self,
+        Parameters(params): Parameters<GetIndexerQueryParams>,
+    ) -> Result<CallToolResult, McpError> {
+        self.indexer_tools.get_wazuh_indexer_query(params).await
     }
 }
 
