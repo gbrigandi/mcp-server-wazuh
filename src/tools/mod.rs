@@ -5,6 +5,7 @@
 
 pub mod agents;
 pub mod alerts;
+pub mod indexer;
 pub mod rules;
 pub mod stats;
 pub mod vulnerabilities;
